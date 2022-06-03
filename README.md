@@ -1,1 +1,1 @@
-# Clase-Rest-Api
+cambiar nombre del archivo configuracion.env a .env
