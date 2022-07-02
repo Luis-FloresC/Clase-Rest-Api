@@ -1,68 +1,150 @@
-const DaoObject = require('../../dao/DaoObject');
-module.exports = class Users {
-  userDao = null;
-  userMemStore = [];
-  userCurrentKey = 0;
+const DaoObject = require('../../dao/mongodb/DaoObject');
+const bcrypt = require('bcryptjs');
+module.exports = class Usuario {
+  usuarioDao = null;
 
-  constructor(userDao = null) {
-    if (!(userDao instanceof DaoObject)) {
+  constructor(usuarioDao = null) {
+    if (!(usuarioDao instanceof DaoObject)) {
       throw new Error('An Instance of DAO Object is Required');
     }
-    this.userDao = userDao;
+    this.usuarioDao = usuarioDao;
   }
   async init() {
-    await this.userDao.init();
-    this.userDao.setup();
+    await this.usuarioDao.init();
+    await this.usuarioDao.setup();
   }
-  async getUsersVersion() {
+  async getVersion() {
     return {
-      entity: 'Users',
+      entity: 'Usuarios',
       version: '1.0.0',
       description: 'CRUD de Usuarios'
     };
   }
 
-  async addUser({
-    avatar = 'NuevoUsuario',
-    password = '',
-    email = '',
-    nombre = '',
-    estado = 'ACT'
+  async addUsuarios({
+    email,
+    nombre,
+    avatar,
+    password,
+    estado
   }) {
-    const result = await this.userDao.insertOne({
-      avatar,
-      password,
+    const result = await this.usuarioDao.insertOne({
       email,
       nombre,
-      estado,
+      avatar,
+      password: bcrypt.hashSync(password),
+      estado
     });
     return {
-      avatar, password, email, nombre, estado, id: result.lastID
+      email,
+      nombre,
+      avatar,
+      estado,
+      result
     };
   };
 
-  async getUsers() {
-    return this.userDao.getAll();
+  async getUsuarios() {
+    return this.usuarioDao.getAll();
   }
 
-  async getUserById({ id }) {
-    return this.userDao.getById({ id });
+  async getUsuarioById({
+    codigo
+  }) {
+    return this.usuarioDao.getById({
+      codigo
+    });
   }
 
-  async updateUser({ avatar, password, email, nombre, estado, id }) {
-    const result = await this.userDao.updateOne({ avatar, password, email, nombre, estado, id });
+  async getUsuarioByEmail({
+    email
+  }) {
+    return this.usuarioDao.getByEmail({
+      email
+    });
+  }
+
+  comparePasswords(rawPassword, dbPassword) {
+    return bcrypt.compareSync(rawPassword, dbPassword);
+  }
+
+  async updatePassword({codigo,password,resetToken}){
+    const result = await this.usuarioDao.updatePassword({
+      codigo,
+      password: bcrypt.hashSync(password),
+      resetToken
+    });
     return {
-      id, avatar, password, email, nombre, estado,modified: result.changes
+      codigo,
+      modified: result
     }
   }
 
-  async deleteUser({ id }) {
-    const userToDelete = await this.userDao.getById({ id });
-    const result = await this.userDao.deleteOne({ id });
+  async updateUsuario({
+    nombre,
+    avatar,
+    password,
+    estado,
+    codigo
+  }) {
+    const result = await this.usuarioDao.updateOne({
+      codigo,
+      nombre,
+      avatar,
+      password: bcrypt.hashSync(password),
+      estado
+    });
     return {
-      ...userToDelete,
+      nombre,
+      avatar,
+      estado,
+      codigo,
+      modified: result
+    }
+  }
+
+
+
+  async deleteUsuario({
+    codigo
+  }) {
+    const usuarioToDelete = await this.usuarioDao.getById({
+      codigo
+    });
+    const result = await this.usuarioDao.deleteOne({
+      codigo
+    });
+    return {
+      ...usuarioToDelete,
       deleted: result.changes
     };
-  }
+  };
+
+  generatePasswordRand(length, type) {
+    var characters = "";
+    switch (type) {
+      case 'num':
+        characters = "0123456789";
+        break;
+      case 'alf':
+        characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        break;
+      case 'rand':
+        //FOR ↓
+        break;
+      default:
+        characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        break;
+    }
+    var pass = "";
+    for (var i = 0; i < length; i++) {
+      if (type == 'rand') {
+        pass += String.fromCharCode((Math.floor((Math.random() * 100)) % 94) + 33);
+      } else {
+        pass += characters.charAt(Math.floor(Math.random() * characters.length));
+      }
+    }
+    return pass;
+  };
 
 }
